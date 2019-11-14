@@ -28,7 +28,6 @@ def evaluate(data, model, onset_threshold=0.5, frame_threshold=0.5, save_path=No
 
         for key, value in pred.items():
             value.squeeze_(0).relu_()
-
         p_ref, i_ref, v_ref = extract_notes(label['onset'], label['frame'], label['velocity'])
         p_est, i_est, v_est = extract_notes(pred['onset'], pred['frame'], pred['velocity'], onset_threshold, frame_threshold)
 
@@ -47,26 +46,38 @@ def evaluate(data, model, onset_threshold=0.5, frame_threshold=0.5, save_path=No
         t_est = t_est.astype(np.float64) * scaling
         f_est = [np.array([midi_to_hz(MIN_MIDI + midi) for midi in freqs]) for freqs in f_est]
 
-        p, r, f, o = evaluate_notes(i_ref, p_ref, i_est, p_est, offset_ratio=None)
+        try:
+            p, r, f, o = evaluate_notes(i_ref, p_ref, i_est, p_est, offset_ratio=None)
+        except:
+            p, r, f, o = 0, 0, 0, 0
         metrics['metric/note/precision'].append(p)
         metrics['metric/note/recall'].append(r)
         metrics['metric/note/f1'].append(f)
         metrics['metric/note/overlap'].append(o)
 
-        p, r, f, o = evaluate_notes(i_ref, p_ref, i_est, p_est)
+        try:
+            p, r, f, o = evaluate_notes(i_ref, p_ref, i_est, p_est)
+        except:
+            p, r, f, o = 0, 0, 0, 0
         metrics['metric/note-with-offsets/precision'].append(p)
         metrics['metric/note-with-offsets/recall'].append(r)
         metrics['metric/note-with-offsets/f1'].append(f)
         metrics['metric/note-with-offsets/overlap'].append(o)
 
-        p, r, f, o = evaluate_notes_with_velocity(i_ref, p_ref, v_ref, i_est, p_est, v_est,
-                                                  offset_ratio=None, velocity_tolerance=0.1)
+        try:
+            p, r, f, o = evaluate_notes_with_velocity(i_ref, p_ref, v_ref, i_est, p_est, v_est,
+                                                      offset_ratio=None, velocity_tolerance=0.1)
+        except:
+            p, r, f, o = 0, 0, 0, 0
         metrics['metric/note-with-velocity/precision'].append(p)
         metrics['metric/note-with-velocity/recall'].append(r)
         metrics['metric/note-with-velocity/f1'].append(f)
         metrics['metric/note-with-velocity/overlap'].append(o)
 
-        p, r, f, o = evaluate_notes_with_velocity(i_ref, p_ref, v_ref, i_est, p_est, v_est, velocity_tolerance=0.1)
+        try:
+            p, r, f, o = evaluate_notes_with_velocity(i_ref, p_ref, v_ref, i_est, p_est, v_est, velocity_tolerance=0.1)
+        except:
+            p, r, f, o = 0, 0, 0, 0
         metrics['metric/note-with-offsets-and-velocity/precision'].append(p)
         metrics['metric/note-with-offsets-and-velocity/recall'].append(r)
         metrics['metric/note-with-offsets-and-velocity/f1'].append(f)
@@ -99,6 +110,8 @@ def evaluate_file(model_file, dataset, dataset_group, sequence_length, save_path
     dataset = dataset_class(**kwargs)
 
     model = torch.load(model_file, map_location=device).eval()
+    # storage = device
+    # model = torch.load(model_file, map_location=lambda storage, location: storage).eval()
     summary(model)
 
     metrics = evaluate(tqdm(dataset), model, onset_threshold, frame_threshold, save_path)

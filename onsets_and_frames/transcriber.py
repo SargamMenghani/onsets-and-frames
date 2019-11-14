@@ -109,10 +109,20 @@ class OnsetsAndFrames(nn.Module):
             'velocity': velocity_pred.reshape(*velocity_label.shape)
         }
 
+        # losses = {
+        #     'loss/onset': F.binary_cross_entropy(predictions['onset'], onset_label),
+        #     'loss/offset': F.binary_cross_entropy(predictions['offset'], offset_label),
+        #     'loss/frame': F.binary_cross_entropy(predictions['frame'], frame_label),
+        #     'loss/velocity': self.velocity_loss(predictions['velocity'], velocity_label, onset_label)
+        # }
+
+        def calculate_binary_cross_entropy(preds, targets):
+            return -torch.mean(torch.log(preds+1e-8)*targets + torch.log(1-preds+1e-8)*(targets==0).type(torch.float))
+
         losses = {
-            'loss/onset': F.binary_cross_entropy(predictions['onset'], onset_label),
-            'loss/offset': F.binary_cross_entropy(predictions['offset'], offset_label),
-            'loss/frame': F.binary_cross_entropy(predictions['frame'], frame_label),
+            'loss/onset': calculate_binary_cross_entropy(predictions['onset'], onset_label),
+            'loss/offset': calculate_binary_cross_entropy(predictions['offset'], offset_label),
+            'loss/frame': calculate_binary_cross_entropy(predictions['frame'], frame_label),
             'loss/velocity': self.velocity_loss(predictions['velocity'], velocity_label, onset_label)
         }
 

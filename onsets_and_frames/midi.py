@@ -8,7 +8,6 @@ from mido import Message, MidiFile, MidiTrack
 from mir_eval.util import hz_to_midi
 from tqdm import tqdm
 
-
 def parse_midi(path):
     """open midi file and return np.array of (onset, offset, note, velocity) rows"""
     midi = mido.MidiFile(path)
@@ -62,6 +61,7 @@ def save_midi(path, pitches, intervals, velocities):
     """
     file = MidiFile()
     track = MidiTrack()
+    track.append(Message('program_change', program=104, time=0))
     file.tracks.append(track)
     ticks_per_second = file.ticks_per_beat * 2.0
 

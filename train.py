@@ -27,6 +27,7 @@ def config():
 
     batch_size = 8
     sequence_length = 327680
+    sequence_length //= 4
     model_complexity = 48
 
     if torch.cuda.is_available() and torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory < 10e9:
@@ -57,17 +58,18 @@ def train(logdir, device, iterations, resume_iteration, checkpoint_interval, bat
     os.makedirs(logdir, exist_ok=True)
     writer = SummaryWriter(logdir)
 
-    train_groups, validation_groups = ['train'], ['validation']
+    # train_groups, validation_groups = ['AkPnBcht', 'AkPnBsdf', 'AkPnCGdD'], ['AkPnStgb']
+    train_groups, validation_groups = ['train'], ['test']
 
     if leave_one_out is not None:
         all_years = {'2004', '2006', '2008', '2009', '2011', '2013', '2014', '2015', '2017'}
         train_groups = list(all_years - {str(leave_one_out)})
         validation_groups = [str(leave_one_out)]
 
-    dataset = MAESTRO(groups=train_groups, sequence_length=sequence_length)
+    dataset = Raag(groups=train_groups, sequence_length=sequence_length)
     loader = DataLoader(dataset, batch_size, shuffle=True)
 
-    validation_dataset = MAESTRO(groups=validation_groups, sequence_length=validation_length)
+    validation_dataset = Raag(groups=validation_groups, sequence_length=validation_length)
 
     if resume_iteration is None:
         model = OnsetsAndFrames(N_MELS, MAX_MIDI - MIN_MIDI + 1, model_complexity).to(device)
@@ -77,7 +79,7 @@ def train(logdir, device, iterations, resume_iteration, checkpoint_interval, bat
         model_path = os.path.join(logdir, f'model-{resume_iteration}.pt')
         model = torch.load(model_path)
         optimizer = torch.optim.Adam(model.parameters(), learning_rate)
-        optimizer.load_state_dict(torch.load(os.path.join(logdir, 'last-optimizer-state.pt')))
+        # optimizer.load_state_dict(torch.load(os.path.join(logdir, 'last-optimizer-state.pt')))
 
     summary(model)
     scheduler = StepLR(optimizer, step_size=learning_rate_decay_steps, gamma=learning_rate_decay_rate)
@@ -86,7 +88,6 @@ def train(logdir, device, iterations, resume_iteration, checkpoint_interval, bat
     for i, batch in zip(loop, cycle(loader)):
         scheduler.step()
         predictions, losses = model.run_on_batch(batch)
-
         loss = sum(losses.values())
         optimizer.zero_grad()
         loss.backward()
